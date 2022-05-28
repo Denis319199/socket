@@ -3,20 +3,42 @@ list(TRANSFORM SOURCE_CODE REPLACE "^\\." "")
 list(TRANSFORM SOURCE_CODE REPLACE "^/" "")
 list(TRANSFORM SOURCE_CODE PREPEND ${PROJECT_DIRECTORY}/)
 
-if (HEADERS_SEARCH_RESULT)
-    execute_process(
-            COMMAND cpplint --repository=${PROJECT_DIRECTORY}/include ${SOURCE_CODE}
-            WORKING_DIRECTORY ${WORKING_DIRECTORY}
-            RESULT_VARIABLE CPPLINT_EXIT_CODE
-    )
-else ()
-    execute_process(
-            COMMAND cpplint ${SOURCE_CODE}
-            WORKING_DIRECTORY ${WORKING_DIRECTORY}
-            RESULT_VARIABLE CPPLINT_EXIT_CODE
-    )
-endif ()
+file(STRINGS ${CPPLINT_TARGET_CACHE_DIR} FILE_CONTENT)
 
-if (NOT ${CPPLINT_EXIT_CODE} EQUAL 0)
-    message(FATAL_ERROR "Code style is not complied")
+list(LENGTH SOURCE_CODE SOURCE_CODE_LENGTH)
+math(EXPR SOURCE_CODE_LENGTH "${SOURCE_CODE_LENGTH} - 1")
+foreach (INDEX RANGE ${SOURCE_CODE_LENGTH})
+    math(EXPR FILE_PATH_INDEX "${INDEX} * 2")
+    list(GET FILE_CONTENT ${FILE_PATH_INDEX} FILE_PATH)
+    file(SHA1 ${FILE_PATH} CURRENT_FILE_HASH)
+
+    math(EXPR FILE_HASH_INDEX "${FILE_PATH_INDEX} + 1")
+    list(GET FILE_CONTENT ${FILE_HASH_INDEX} SAVED_FILE_HASH)
+
+    if (NOT ${CURRENT_FILE_HASH} STREQUAL ${SAVED_FILE_HASH})
+        list(GET SOURCE_CODE ${INDEX} RELATIVE_FILE_PATH)
+        list(APPEND SOURCE_CODE_REQ ${RELATIVE_FILE_PATH})
+    endif ()
+
+    string(APPEND NEW_FILE_CONTENT "${FILE_PATH}\n${CURRENT_FILE_HASH}\n")
+endforeach ()
+
+if (SOURCE_CODE_REQ)
+    if (HEADERS_SEARCH_RESULT)
+        execute_process(
+                COMMAND cpplint --repository=${PROJECT_DIRECTORY}/include ${SOURCE_CODE_REQ}
+                WORKING_DIRECTORY ${WORKING_DIRECTORY}
+                RESULT_VARIABLE CPPLINT_EXIT_CODE)
+    else ()
+        execute_process(
+                COMMAND cpplint ${SOURCE_CODE}
+                WORKING_DIRECTORY ${WORKING_DIRECTORY}
+                RESULT_VARIABLE CPPLINT_EXIT_CODE)
+    endif ()
+
+    if (NOT ${CPPLINT_EXIT_CODE} EQUAL 0)
+        message(FATAL_ERROR "Code style is not complied")
+    endif ()
+
+    file(WRITE ${CPPLINT_TARGET_CACHE_DIR} ${NEW_FILE_CONTENT})
 endif ()

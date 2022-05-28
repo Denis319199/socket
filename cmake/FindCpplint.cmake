@@ -45,15 +45,24 @@ if (SOURCE_CODE)
                     "of which a '${TARGET_NAME}' directory should reside")
         endif ()
 
+        # Gets a path for cache file and creates it
         string(REPLACE "/CheckCodeStyle.cmake" "" CPPLINT_TARGET_CACHE_DIR ${CHECK_CODE_STYLE_SCRIPT_PATH})
         set(CPPLINT_TARGET_CACHE_DIR ${CPPLINT_TARGET_CACHE_DIR}/cache/cpplint/${TARGET_NAME})
         file(WRITE ${CPPLINT_TARGET_CACHE_DIR} "")
 
+        # Fills cache file with content: full file path + SHA1 file hash
         foreach(CURRENT_FILE ${SOURCE_CODE})
-            file(WRITE ${CURRENT_FILE} "")
-            file(TIMESTAMP ${CURRENT_FILE} LAST_MODIFICATION_TIME)
-            file(APPEND ${CPPLINT_TARGET_CACHE_DIR} "${CURRENT_FILE}\n${LAST_MODIFICATION_TIME}\n")
+            string(REGEX REPLACE "^\\." "" CURRENT_FILE ${CURRENT_FILE})
+            string(REGEX REPLACE "^/" "" CURRENT_FILE ${CURRENT_FILE})
+            string(PREPEND CURRENT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/)
+
+            file(SHA1 ${CURRENT_FILE} CURRENT_FILE_HASH)
+            file(APPEND ${CPPLINT_TARGET_CACHE_DIR} "${CURRENT_FILE}\n${CURRENT_FILE_HASH}\n")
         endforeach()
+
+        # Gets a relative path to this CMakeLists.txt starting from top-level one
+        string(REPLACE ${CMAKE_SOURCE_DIR} "" CMAKE_RELATIVE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+        set(CMAKE_RELATIVE_CURRENT_SOURCE_DIR .${CMAKE_RELATIVE_CURRENT_SOURCE_DIR})
 
         # Creates a new target and binds execution of cmake script to it
         add_custom_target(${CPPLINT_TARGET_NAME}
