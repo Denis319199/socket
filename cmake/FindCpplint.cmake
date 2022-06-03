@@ -38,7 +38,7 @@ if (SOURCE_CODE)
         # the 'include' directory must exist and this directory must consist the
         # other called as a current target; otherwise there is no header file,
         # so 'include' directory is not required
-        string(REGEX MATCH "(.hpp;)|(.h;)" HEADERS_SEARCH_RESULT "${SOURCE_CODE}")
+        string(REGEX MATCH "\\.hpp;|\\.hpp$|\\.h;|\\.h$" HEADERS_SEARCH_RESULT "${SOURCE_CODE}")
         if (HEADERS_SEARCH_RESULT AND NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/include/${TARGET_NAME})
             message(FATAL_ERROR "Invalid project structure: in the same directory where "
                     "'CMakeLists.txt' is placed there should be an 'include' directory inside "
